@@ -34,13 +34,24 @@ template:
   - binary_sensor:
       # Change sensor.my_phone_battery_state to your phone's sensor from the
       # Home Assistant Companion app (iPhone & Android both provide it).
+      #
+      # Charging is read from whichever reported most recently:
+      #  • the Companion app's battery state (can lag on iPhone, and stops
+      #    completely if the app is swiped away), or
+      #  • input_boolean.bedroom_phone_on_charger, which an iPhone Shortcuts
+      #    automation flips instantly on charger connect/disconnect (README).
       - name: Bedroom Phone Charging
         unique_id: bedroom_phone_charging
         icon: mdi:battery-charging
         state: >
-          {{ states('sensor.my_phone_battery_state') | lower in ['charging', 'full'] }}
-        availability: >
-          {{ states('sensor.my_phone_battery_state') not in ['unknown', 'unavailable'] }}
+          {% set app = states.sensor.my_phone_battery_state %}
+          {% set shortcut = states.input_boolean.bedroom_phone_on_charger %}
+          {% set app_ok = app is not none and app.state not in ['unknown', 'unavailable'] %}
+          {% if app_ok and (shortcut is none or app.last_changed > shortcut.last_changed) %}
+            {{ app.state | lower in ['charging', 'full'] }}
+          {% else %}
+            {{ shortcut is not none and shortcut.state == 'on' }}
+          {% endif %}
 
 # ──────────────────────── nothing to edit below here ─────────────────────────
 
@@ -90,6 +101,9 @@ input_boolean:
   bedroom_away_off:
     name: Lights off when everyone leaves
     icon: mdi:home-export-outline
+  bedroom_phone_on_charger:
+    name: Phone on charger (set by iPhone Shortcut)
+    icon: mdi:power-plug
   bedroom_defaults_applied:
     name: Bedroom defaults applied (internal)
     icon: mdi:cog

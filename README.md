@@ -39,9 +39,18 @@ free on GitHub Pages. You add it to your home screen, so no App Store and no sub
 
 Default settings (bedtime 22:30, wake 07:00 and so on) are filled in on first start. Change them in the app afterwards.
 
-> **iPhone tip:** to make "phone on charge" instant, add a Shortcuts automation:
-> *Automation → Charger → Is Connected → Run Immediately →* Home Assistant *Perform Action* `script.bedroom_goodnight`.
-> (Only do this if you want it at any time. The built-in automation already checks the time for you.)
+### iPhone: make "phone on charge" instant (recommended)
+
+iOS only lets the Companion app send its battery state now and then, and not at all if you swipe the app away.
+Two Shortcuts automations fix that. They run the moment the charger connects or disconnects, even with the app closed:
+
+1. **Shortcuts → Automation → + → Charger → Is Connected → Run Immediately → Next**
+2. **New Blank Automation → Add Action →** search **Home Assistant** → **Perform Action**
+   (on older app versions it's called *Call Service*).
+3. Action: `input_boolean.turn_on`, entity: `input_boolean.bedroom_phone_on_charger`. Then tap **Done**.
+4. Repeat with **Is Disconnected** and `input_boolean.turn_off`.
+
+Home Assistant uses whichever reported most recently, the Shortcut or the app, and the bedtime check still applies.
 
 ## 2 · Put the app online with GitHub Pages
 
