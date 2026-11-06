@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Glow · Bedroom Lights</title>
+  <meta name="description" content="Fun, simple control for your Hue bedroom lights through Home Assistant.">
+  <meta name="theme-color" content="#14112b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Glow">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-period="evening">
+  <div class="sky" aria-hidden="true"></div>
+
+  <!-- ─────────────── First-run / connect ─────────────── -->
+  <section id="setup" class="view" hidden>
+    <div class="setup-card">
+      <div class="logo-orb" aria-hidden="true"></div>
+      <h1>Glow</h1>
+      <p class="muted">Your bedroom lights, the fun way.</p>
+
+      <form id="setup-form" autocomplete="off">
+        <label class="field">
+          <span>Home Assistant address</span>
+          <input id="setup-url" type="url" inputmode="url" placeholder="https://xxxx.ui.nabu.casa" required>
+        </label>
+        <label class="field">
+          <span>Long-lived access token</span>
+          <input id="setup-token" type="password" placeholder="eyJhbGciOi…" required>
+        </label>
+        <p id="setup-error" class="error" hidden></p>
+        <button class="btn primary" type="submit" id="setup-connect">Connect</button>
+      </form>
+      <button class="btn ghost" id="setup-demo" type="button">✨ Just let me play (demo)</button>
+      <details class="help">
+        <summary>Where do I get these?</summary>
+        <ol>
+          <li><b>Address</b>: the web address you open Home Assistant with. From outside your home it must start with <code>https://</code> (Nabu Casa, DuckDNS or a Cloudflare tunnel).</li>
+          <li><b>Token</b>: in Home Assistant tap your name (bottom-left) → <i>Security</i> → <i>Long-lived access tokens</i> → <i>Create token</i>. Copy it here.</li>
+          <li>Your token is only saved on this phone. It never goes to GitHub.</li>
+        </ol>
+      </details>
+    </div>
+  </section>
+
+  <!-- ─────────────── Main app ─────────────── -->
+  <main id="app" class="view" hidden>
+    <header class="top">
+      <div>
+        <p class="greet" id="greet">Good evening</p>
+        <h1 class="room">Bedroom</h1>
+      </div>
+      <div class="top-right">
+        <span class="chip" id="period-chip">🌆 Evening</span>
+        <span class="conn" id="conn" title="Connection"></span>
+      </div>
+    </header>
+
+    <!-- Lights tab -->
+    <section class="tab" data-tab="lights">
+      <div class="banner" id="banner" hidden></div>
+
+      <div class="hero">
+        <button class="orb" id="orb" aria-label="Toggle all lights">
+          <span class="orb-core"></span>
+          <span class="orb-label" id="orb-label">Off</span>
+        </button>
+        <div class="hero-side">
+          <p class="hero-count" id="hero-count">0 of 4 on</p>
+          <div class="slider-wrap">
+            <span class="slider-icon">🔅</span>
+            <input type="range" min="1" max="100" value="50" class="slider" id="room-bri" aria-label="Room brightness">
+            <span class="slider-icon">🔆</span>
+          </div>
+          <div class="group-pills">
+            <button class="pill" id="pill-lamps">🛏️ Lamps</button>
+            <button class="pill" id="pill-downs">⬇️ Downlights</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Scenes</h2>
+      <div class="scenes" id="scenes"></div>
+
+      <h2 class="section-title">Lights</h2>
+      <div class="lights" id="lights"></div>
+
+      <div class="actions-row">
+        <button class="btn night big" id="btn-goodnight">🌙 Goodnight</button>
+        <button class="btn ghost big" id="btn-alloff">All off</button>
+      </div>
+    </section>
+
+    <!-- Routines tab -->
+    <section class="tab" data-tab="routines" hidden>
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🔌</span>
+          <div>
+            <h3>Phone on charge = bedtime</h3>
+            <p class="muted">After bedtime, plugging your phone in fades the lights out.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="autoGoodnight"><span></span></label>
+        </div>
+        <div class="row"><span>Bedtime from</span><input type="time" data-time="bedtime"></div>
+        <div class="row"><span>Fade out over</span><span class="num"><input type="range" min="0" max="10" step="1" data-number="goodnightFade" class="slider small"><b data-number-label="goodnightFade" data-unit=" min"></b></span></div>
+        <div class="row"><span>Phone right now</span><b id="phone-status">—</b></div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">😴</span>
+          <div>
+            <h3>Sleep mode</h3>
+            <p class="muted">Turns on with Goodnight, off when you unplug in the morning.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="sleep"><span></span></label>
+        </div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🕯️</span>
+          <div>
+            <h3>Gentle lights at night</h3>
+            <p class="muted">Switches and the Hue app turn lights on as a soft glow after bedtime.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="softStart"><span></span></label>
+        </div>
+        <div class="row"><span>Glow brightness</span><span class="num"><input type="range" min="1" max="30" step="1" data-number="nightBrightness" class="slider small"><b data-number-label="nightBrightness" data-unit="%"></b></span></div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">☀️</span>
+          <div>
+            <h3>Daylight lock</h3>
+            <p class="muted">In daylight, lights turned on by switches go back off. This app still works.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="lockout"><span></span></label>
+        </div>
+        <div class="row"><span id="override-text">Switches locked in daylight</span><button class="btn small" id="btn-override">Pause 1h</button></div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🌅</span>
+          <div>
+            <h3>Wake-up light</h3>
+            <p class="muted">Bedside lamps slowly brighten like a sunrise.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="wake"><span></span></label>
+        </div>
+        <div class="row"><span>Lights fully up at</span><input type="time" data-time="wakeTime"></div>
+        <div class="row"><span>Sunrise length</span><span class="num"><input type="range" min="5" max="45" step="5" data-number="wakeFade" class="slider small"><b data-number-label="wakeFade" data-unit=" min"></b></span></div>
+        <div class="row"><span>Weekdays only</span><label class="switch"><input type="checkbox" data-bool="wakeWeekdays"><span></span></label></div>
+        <div class="row"><span>Try it now</span><button class="btn small" id="btn-wake-test">Start sunrise</button></div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🏃</span>
+          <div>
+            <h3>Everyone left</h3>
+            <p class="muted">All lights off 10 minutes after the last person leaves home.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="awayOff"><span></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings tab -->
+    <section class="tab" data-tab="settings" hidden>
+      <div class="card">
+        <h3>Connection</h3>
+        <p class="muted" id="conn-text">Not connected</p>
+        <form id="settings-form" autocomplete="off">
+          <label class="field"><span>Home Assistant address</span><input id="set-url" type="url" inputmode="url"></label>
+          <label class="field"><span>Access token</span><input id="set-token" type="password" placeholder="(unchanged)"></label>
+          <button class="btn primary" type="submit">Save &amp; reconnect</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Light groups</h3>
+        <p class="muted">Only change these if you renamed the groups in Home Assistant.</p>
+        <label class="field"><span>All lights</span><input data-id-field="all"></label>
+        <label class="field"><span>Bedside lamps</span><input data-id-field="lamps"></label>
+        <label class="field"><span>Downlights</span><input data-id-field="downs"></label>
+        <button class="btn" id="btn-save-ids" type="button">Save groups</button>
+      </div>
+      <div class="card">
+        <h3>Demo mode</h3>
+        <p class="muted">Play with the app using pretend lights.</p>
+        <div class="actions-row">
+          <button class="btn" id="btn-demo" type="button">Switch to demo</button>
+          <button class="btn danger" id="btn-forget" type="button">Forget this phone</button>
+        </div>
+      </div>
+      <p class="muted center small">Glow · made for your Hue lights · <span id="version"></span></p>
+    </section>
+
+    <nav class="tabbar">
+      <button data-go="lights" class="active"><span>💡</span>Lights</button>
+      <button data-go="routines"><span>⏰</span>Routines</button>
+      <button data-go="settings"><span>⚙️</span>Settings</button>
+    </nav>
+  </main>
+
+  <!-- Light detail sheet -->
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head">
+      <div class="bulb big" id="sheet-bulb"></div>
+      <div>
+        <h3 id="sheet-title">Light</h3>
+        <p class="muted" id="sheet-sub">Off</p>
+      </div>
+      <label class="switch"><input type="checkbox" id="sheet-toggle"><span></span></label>
+    </div>
+    <label class="field"><span>Brightness</span>
+      <input type="range" min="1" max="100" class="slider" id="sheet-bri"></label>
+    <label class="field" id="sheet-ct-wrap"><span>Warm ↔ Cool</span>
+      <input type="range" min="2000" max="6500" step="50" class="slider ct" id="sheet-ct"></label>
+    <div id="sheet-colours-wrap">
+      <span class="field-label">Colour</span>
+      <div class="swatches" id="sheet-colours"></div>
+    </div>
+    <button class="btn ghost" id="sheet-close" type="button">Done</button>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
