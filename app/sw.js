@@ -1,5 +1,5 @@
 // Offline shell for Glow. Network-first so updates from GitHub show up straight away.
-const CACHE = 'glow-v1';
+const CACHE = 'glow-v2';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {

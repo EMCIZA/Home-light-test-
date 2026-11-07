@@ -53,6 +53,22 @@ template:
             {{ shortcut is not none and shortcut.state == 'on' }}
           {% endif %}
 
+      # Partner's phone – same idea. Optional: change sensor.partner_phone_battery_state
+      # to their Companion app sensor, or just use the iPhone Shortcuts with
+      # input_boolean.bedroom_partner_phone_on_charger (README).
+      - name: Bedroom Partner Phone Charging
+        unique_id: bedroom_partner_phone_charging
+        icon: mdi:battery-charging-outline
+        state: >
+          {% set app = states.sensor.partner_phone_battery_state %}
+          {% set shortcut = states.input_boolean.bedroom_partner_phone_on_charger %}
+          {% set app_ok = app is not none and app.state not in ['unknown', 'unavailable'] %}
+          {% if app_ok and (shortcut is none or app.last_changed > shortcut.last_changed) %}
+            {{ app.state | lower in ['charging', 'full'] }}
+          {% else %}
+            {{ shortcut is not none and shortcut.state == 'on' }}
+          {% endif %}
+
 # ──────────────────────── nothing to edit below here ─────────────────────────
 
       - name: Bedroom Is Daytime
@@ -104,6 +120,12 @@ input_boolean:
   bedroom_phone_on_charger:
     name: Phone on charger (set by iPhone Shortcut)
     icon: mdi:power-plug
+  bedroom_partner_phone_on_charger:
+    name: Partner phone on charger (set by iPhone Shortcut)
+    icon: mdi:power-plug-outline
+  bedroom_wait_for_both_phones:
+    name: Goodnight waits for both phones
+    icon: mdi:account-multiple-check
   bedroom_defaults_applied:
     name: Bedroom defaults applied (internal)
     icon: mdi:cog
@@ -385,13 +407,21 @@ automation:
     mode: single
     triggers:
       - trigger: state
-        entity_id: binary_sensor.bedroom_phone_charging
+        entity_id:
+          - binary_sensor.bedroom_phone_charging
+          - binary_sensor.bedroom_partner_phone_charging
         from: "off"
         to: "on"
     conditions:
       - condition: state
         entity_id: input_boolean.bedroom_auto_goodnight
         state: "on"
+      # "Wait for both phones" on → only when both are charging.
+      - condition: template
+        value_template: >
+          {{ is_state('input_boolean.bedroom_wait_for_both_phones', 'off')
+             or (is_state('binary_sensor.bedroom_phone_charging', 'on')
+                 and is_state('binary_sensor.bedroom_partner_phone_charging', 'on')) }}
       - condition: state
         entity_id: sensor.bedroom_light_period
         state: night
@@ -406,7 +436,9 @@ automation:
     alias: "Bedroom · Phone unplugged in the morning → end sleep mode"
     triggers:
       - trigger: state
-        entity_id: binary_sensor.bedroom_phone_charging
+        entity_id:
+          - binary_sensor.bedroom_phone_charging
+          - binary_sensor.bedroom_partner_phone_charging
         from: "on"
         to: "off"
     conditions:

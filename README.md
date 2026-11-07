@@ -52,6 +52,13 @@ Two Shortcuts automations fix that. They run the moment the charger connects or 
 
 Home Assistant uses whichever reported most recently, the Shortcut or the app, and the bedtime check still applies.
 
+**Partner's phone:** do the same on their iPhone (they need the Home Assistant app installed and logged in),
+but use `input_boolean.bedroom_partner_phone_on_charger`. Then choose in Glow → Routines:
+- **Wait for both phones = off:** whichever phone goes on charge first after bedtime starts Goodnight.
+- **Wait for both phones = on:** Goodnight waits until both phones are charging.
+
+Unplugging either phone in the morning ends sleep mode.
+
 ## 2 · Put the app online with GitHub Pages
 
 1. Merge this branch into `main`.

@@ -3,7 +3,7 @@
  * is stored only in this browser (localStorage). Includes a demo mode. */
 'use strict';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 // ───────────────────────── Entity IDs (match the HA package) ─────────────────────────
 const DEFAULT_GROUPS = {
@@ -15,6 +15,8 @@ const IDS = {
   period: 'sensor.bedroom_light_period',
   daytime: 'binary_sensor.bedroom_is_daytime',
   phone: 'binary_sensor.bedroom_phone_charging',
+  partnerPhone: 'binary_sensor.bedroom_partner_phone_charging',
+  bothPhones: 'input_boolean.bedroom_wait_for_both_phones',
   sleep: 'input_boolean.bedroom_sleep_mode',
   autoGoodnight: 'input_boolean.bedroom_auto_goodnight',
   softStart: 'input_boolean.bedroom_night_soft_start',
@@ -204,6 +206,8 @@ class DemoBackend {
     ent(IDS.daytime, h >= 8 && h < 18 ? 'on' : 'off');
     ent(IDS.period, h >= 22 || h < 7 ? 'night' : h >= 8 && h < 18 ? 'day' : 'evening');
     ent(IDS.phone, 'off');
+    ent(IDS.partnerPhone, 'off');
+    ent(IDS.bothPhones, 'off');
     ent(IDS.sleep, 'off');
     ent(IDS.autoGoodnight, 'on');
     ent(IDS.softStart, 'on');
@@ -613,9 +617,10 @@ function renderRoutines() {
     const label = $(`[data-number-label="${input.dataset.number}"]`);
     if (label) label.textContent = s ? `${input.value}${label.dataset.unit}` : '—';
   }
-  const phone = st(IDS.phone);
-  $('#phone-status').textContent = !phone || phone.state === 'unavailable' ? '❓ Not set up'
-    : phone.state === 'on' ? '⚡ Charging' : '🔋 Not charging';
+  const phoneText = (p) => (!p || p.state === 'unavailable' ? '❓ Not set up'
+    : p.state === 'on' ? '⚡ Charging' : '🔋 Not charging');
+  $('#phone-status').textContent = phoneText(st(IDS.phone));
+  $('#partner-status').textContent = phoneText(st(IDS.partnerPhone));
   const timer = st(IDS.override);
   const active = timer?.state === 'active';
   $('#override-text').textContent = active ? `🔓 Paused · ${minutesLeft(timer)} min left` : 'Let switches work for an hour';
