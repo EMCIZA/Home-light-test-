@@ -69,6 +69,28 @@ template:
             {{ shortcut is not none and shortcut.state == 'on' }}
           {% endif %}
 
+      # Is anyone home? Uses both phones' location from the Companion app
+      # (change device_tracker.my_phone / device_tracker.partner_phone to yours)
+      # plus anyone Home Assistant tracks as a person.
+      - name: Bedroom Someone Home
+        unique_id: bedroom_someone_home
+        icon: mdi:home-account
+        state: >
+          {{ states('zone.home') | int(0) > 0
+             or is_state('device_tracker.my_phone', 'home')
+             or is_state('device_tracker.partner_phone', 'home') }}
+      # Whose phone should Goodnight wait for? Only people who are home.
+      # A phone without location set up always counts as home.
+      - name: Bedroom Phones Ready For Bed
+        unique_id: bedroom_phones_ready_for_bed
+        icon: mdi:bed
+        state: >
+          {% set me_away = states('device_tracker.my_phone') not in ['home', 'unknown', 'unavailable'] %}
+          {% set partner_away = states('device_tracker.partner_phone') not in ['home', 'unknown', 'unavailable'] %}
+          {% set me_ok = me_away or is_state('binary_sensor.bedroom_phone_charging', 'on') %}
+          {% set partner_ok = partner_away or is_state('binary_sensor.bedroom_partner_phone_charging', 'on') %}
+          {{ me_ok and partner_ok and not (me_away and partner_away) }}
+
 # ──────────────────────── nothing to edit below here ─────────────────────────
 
       - name: Bedroom Is Daytime
@@ -410,18 +432,18 @@ automation:
         entity_id:
           - binary_sensor.bedroom_phone_charging
           - binary_sensor.bedroom_partner_phone_charging
+          - binary_sensor.bedroom_phones_ready_for_bed
         from: "off"
         to: "on"
     conditions:
       - condition: state
         entity_id: input_boolean.bedroom_auto_goodnight
         state: "on"
-      # "Wait for both phones" on → only when both are charging.
+      # "Wait for both phones" on → every phone that's at home must be charging.
       - condition: template
         value_template: >
           {{ is_state('input_boolean.bedroom_wait_for_both_phones', 'off')
-             or (is_state('binary_sensor.bedroom_phone_charging', 'on')
-                 and is_state('binary_sensor.bedroom_partner_phone_charging', 'on')) }}
+             or is_state('binary_sensor.bedroom_phones_ready_for_bed', 'on') }}
       - condition: state
         entity_id: sensor.bedroom_light_period
         state: night
@@ -478,8 +500,9 @@ automation:
       - condition: template
         value_template: >
           {{ is_state('input_boolean.bedroom_wake_weekdays_only', 'off') or now().weekday() < 5 }}
-      - condition: template   # someone is home (or presence isn't set up)
-        value_template: "{{ states('zone.home') | int(1) > 0 }}"
+      - condition: state   # someone is home
+        entity_id: binary_sensor.bedroom_someone_home
+        state: "on"
     actions:
       - action: script.turn_on
         target: { entity_id: script.bedroom_wake_up }
@@ -578,9 +601,10 @@ automation:
   - id: bedroom_away_off
     alias: "Bedroom · Everyone left → lights off"
     triggers:
-      - trigger: numeric_state
-        entity_id: zone.home
-        below: 1
+      - trigger: state
+        entity_id: binary_sensor.bedroom_someone_home
+        from: "on"
+        to: "off"
         for: { minutes: 10 }
     conditions:
       - condition: state

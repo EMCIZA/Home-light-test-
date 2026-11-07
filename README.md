@@ -59,6 +59,11 @@ but use `input_boolean.bedroom_partner_phone_on_charger`. Then choose in Glow â†
 
 Unplugging either phone in the morning ends sleep mode.
 
+**Who's home:** set `device_tracker.my_phone` and `device_tracker.partner_phone` in the package to your phones'
+location trackers (from the Companion app). Then:
+- *Wait for both phones* only waits for phones that are **at home**, so if one of you is away, the other's phone alone starts Goodnight.
+- *Everyone left* only switches the lights off when **neither** phone is home.
+
 ## 2 Â· Put the app online with GitHub Pages
 
 1. Merge this branch into `main`.
