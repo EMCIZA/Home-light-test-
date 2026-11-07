@@ -193,117 +193,226 @@ timer:
     icon: mdi:lock-open-variant
 
 ###############################################################################
-#  SCENES (as scripts, so they fade smoothly and handle white-only bulbs)
+#  SCENES – warm and colourful only, no cool/blue-white light.
+#  Each scene "paints" the lights via script.bedroom_paint:
+#    lamp_bri / down_bri   brightness % (0 = off)
+#    l1, l2 / d1, d2       RGB colours for left/right lamp and downlight 1/2
+#    lamp_k / down_k       warm white (kelvin) used when no colour is given,
+#                          or when the bulbs can't do colour
 ###############################################################################
 script:
-  bedroom_scene_energise:
-    alias: "Scene · Energise"
-    icon: mdi:lightning-bolt
-    mode: restart
+  bedroom_paint:
+    alias: "Bedroom · Paint lights (used by scenes)"
+    icon: mdi:palette
+    mode: parallel
     sequence:
-      - action: light.turn_on
-        target: { entity_id: light.bedroom_all_lights }
-        data: { brightness_pct: 100, color_temp_kelvin: 6000, transition: 1 }
+      - variables:
+          lamps_colour: "{{ state_attr('light.bedside_lamps', 'supported_color_modes') | default([], true) | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}"
+          downs_colour: "{{ state_attr('light.downlights', 'supported_color_modes') | default([], true) | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}"
+          t: "{{ transition | default(2) }}"
+      - if: "{{ lamp_bri | default(0) | int == 0 }}"
+        then:
+          - action: light.turn_off
+            target: { entity_id: light.bedside_lamps }
+            data: { transition: "{{ t }}" }
+        else:
+          - if: "{{ lamps_colour and l1 is defined }}"
+            then:
+              - action: light.turn_on
+                target: { entity_id: *lamp_left }
+                data: { brightness_pct: "{{ lamp_bri }}", rgb_color: "{{ l1 }}", transition: "{{ t }}" }
+              - action: light.turn_on
+                target: { entity_id: *lamp_right }
+                data: { brightness_pct: "{{ lamp_bri }}", rgb_color: "{{ l2 | default(l1) }}", transition: "{{ t }}" }
+            else:
+              - action: light.turn_on
+                target: { entity_id: light.bedside_lamps }
+                data: { brightness_pct: "{{ lamp_bri }}", color_temp_kelvin: "{{ lamp_k | default(2200) }}", transition: "{{ t }}" }
+      - if: "{{ down_bri | default(0) | int == 0 }}"
+        then:
+          - action: light.turn_off
+            target: { entity_id: light.downlights }
+            data: { transition: "{{ t }}" }
+        else:
+          - if: "{{ downs_colour and d1 is defined }}"
+            then:
+              - action: light.turn_on
+                target: { entity_id: *down_1 }
+                data: { brightness_pct: "{{ down_bri }}", rgb_color: "{{ d1 }}", transition: "{{ t }}" }
+              - action: light.turn_on
+                target: { entity_id: *down_2 }
+                data: { brightness_pct: "{{ down_bri }}", rgb_color: "{{ d2 | default(d1) }}", transition: "{{ t }}" }
+            else:
+              - action: light.turn_on
+                target: { entity_id: light.downlights }
+                data: { brightness_pct: "{{ down_bri }}", color_temp_kelvin: "{{ down_k | default(2200) }}", transition: "{{ t }}" }
 
-  bedroom_scene_bright:
-    alias: "Scene · Bright"
-    icon: mdi:lightbulb-on
+  bedroom_scene_golden:
+    alias: "Scene · Golden"
+    icon: mdi:white-balance-sunny
     mode: restart
     sequence:
-      - action: light.turn_on
-        target: { entity_id: light.bedroom_all_lights }
-        data: { brightness_pct: 100, color_temp_kelvin: 4000, transition: 1 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 100
+          l1: [255, 170, 60]
+          down_bri: 100
+          d1: [255, 185, 80]
+          lamp_k: 2400
+          down_k: 2400
+          transition: 1
+
+  bedroom_scene_citrus:
+    alias: "Scene · Citrus"
+    icon: mdi:fruit-citrus
+    mode: restart
+    sequence:
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 100
+          l1: [255, 120, 0]
+          l2: [255, 150, 20]
+          down_bri: 90
+          d1: [255, 200, 40]
+          lamp_k: 2400
+          down_k: 2400
+          transition: 1
 
   bedroom_scene_read:
     alias: "Scene · Read"
     icon: mdi:book-open-variant
     mode: restart
     sequence:
-      - action: light.turn_on
-        target: { entity_id: light.bedside_lamps }
-        data: { brightness_pct: 85, color_temp_kelvin: 4000, transition: 1 }
-      - action: light.turn_on
-        target: { entity_id: light.downlights }
-        data: { brightness_pct: 35, color_temp_kelvin: 3000, transition: 1 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 85
+          lamp_k: 2700
+          down_bri: 30
+          d1: [255, 170, 80]
+          down_k: 2400
+          transition: 1
 
   bedroom_scene_relax:
     alias: "Scene · Relax"
     icon: mdi:sofa
     mode: restart
     sequence:
-      - action: light.turn_on
-        target: { entity_id: light.bedroom_all_lights }
-        data: { brightness_pct: 55, color_temp_kelvin: 2400, transition: 2 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 55
+          lamp_k: 2200
+          down_bri: 45
+          d1: [255, 140, 90]
+          down_k: 2200
 
   bedroom_scene_movie:
     alias: "Scene · Movie"
     icon: mdi:movie-open
     mode: restart
     sequence:
-      - action: light.turn_off
-        target: { entity_id: light.downlights }
-        data: { transition: 2 }
-      - action: light.turn_on
-        target: { entity_id: light.bedside_lamps }
-        data: { brightness_pct: 20, color_temp_kelvin: 2200, transition: 2 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 20
+          lamp_k: 2200
+          down_bri: 0
 
   bedroom_scene_sunset:
     alias: "Scene · Sunset"
     icon: mdi:weather-sunset
     mode: restart
     sequence:
-      - if: &lamps_have_colour
-          - condition: template
-            value_template: >
-              {{ state_attr('light.bedside_lamps', 'supported_color_modes') | default([], true)
-                 | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}
-        then:
-          - action: light.turn_on
-            target: { entity_id: *lamp_left }
-            data: { brightness_pct: 70, rgb_color: [255, 120, 40], transition: 2 }
-          - action: light.turn_on
-            target: { entity_id: *lamp_right }
-            data: { brightness_pct: 60, rgb_color: [255, 70, 110], transition: 2 }
-        else:
-          - action: light.turn_on
-            target: { entity_id: light.bedside_lamps }
-            data: { brightness_pct: 65, color_temp_kelvin: 2000, transition: 2 }
-      - action: light.turn_on
-        target: { entity_id: light.downlights }
-        data: { brightness_pct: 25, color_temp_kelvin: 2200, transition: 2 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 70
+          l1: [255, 120, 40]
+          l2: [255, 70, 110]
+          down_bri: 30
+          d1: [255, 90, 60]
+          d2: [255, 60, 120]
+          lamp_k: 2000
+          down_k: 2200
+
+  bedroom_scene_rose:
+    alias: "Scene · Rose"
+    icon: mdi:flower
+    mode: restart
+    sequence:
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 60
+          l1: [255, 90, 150]
+          l2: [255, 120, 170]
+          down_bri: 35
+          d1: [255, 60, 120]
+          d2: [230, 80, 200]
+
+  bedroom_scene_ocean:
+    alias: "Scene · Ocean"
+    icon: mdi:waves
+    mode: restart
+    sequence:
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 50
+          l1: [0, 180, 255]
+          l2: [0, 220, 200]
+          down_bri: 30
+          d1: [20, 80, 255]
+          d2: [0, 150, 220]
+
+  bedroom_scene_aurora:
+    alias: "Scene · Aurora"
+    icon: mdi:aurora
+    mode: restart
+    sequence:
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 55
+          l1: [60, 255, 140]
+          l2: [140, 80, 255]
+          down_bri: 30
+          d1: [0, 200, 170]
+          d2: [100, 60, 255]
 
   bedroom_scene_galaxy:
     alias: "Scene · Galaxy"
     icon: mdi:creation
     mode: restart
     sequence:
-      - if: *lamps_have_colour
-        then:
-          - action: light.turn_on
-            target: { entity_id: *lamp_left }
-            data: { brightness_pct: 55, rgb_color: [140, 60, 255], transition: 2 }
-          - action: light.turn_on
-            target: { entity_id: *lamp_right }
-            data: { brightness_pct: 55, rgb_color: [40, 110, 255], transition: 2 }
-        else:
-          - action: light.turn_on
-            target: { entity_id: light.bedside_lamps }
-            data: { brightness_pct: 30, color_temp_kelvin: 2700, transition: 2 }
-      - action: light.turn_off
-        target: { entity_id: light.downlights }
-        data: { transition: 2 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 55
+          l1: [140, 60, 255]
+          l2: [40, 110, 255]
+          down_bri: 20
+          d1: [90, 40, 200]
+          d2: [60, 30, 180]
+
+  bedroom_scene_lavender:
+    alias: "Scene · Lavender"
+    icon: mdi:flower-tulip
+    mode: restart
+    sequence:
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 55
+          l1: [190, 140, 255]
+          l2: [210, 160, 255]
+          down_bri: 35
+          d1: [170, 120, 255]
 
   bedroom_scene_nightlight:
     alias: "Scene · Nightlight"
     icon: mdi:weather-night
     mode: restart
     sequence:
-      - action: light.turn_off
-        target: { entity_id: light.downlights }
-        data: { transition: 1 }
-      - action: light.turn_on
-        target: { entity_id: light.bedside_lamps }
-        data: { brightness_pct: 3, color_temp_kelvin: 2000, transition: 1 }
+      - action: script.bedroom_paint
+        data:
+          lamp_bri: 3
+          l1: [255, 90, 20]
+          lamp_k: 2000
+          down_bri: 0
+          transition: 1
 
   ##########################################################################
   #  ROUTINES
@@ -357,7 +466,7 @@ script:
       - action: light.turn_on
         target: { entity_id: light.bedside_lamps }
         data: { brightness_pct: 1, color_temp_kelvin: 2000 }
-      # One gentle step per minute: 1% warm → 80% daylight-ish.
+      # One gentle step per minute: 1% candle → 80% warm gold (never cool white).
       - repeat:
           while:
             - condition: state
@@ -370,7 +479,7 @@ script:
               target: { entity_id: light.bedside_lamps }
               data:
                 brightness_pct: "{{ (1 + 79 * repeat.index / steps) | round(0) | int }}"
-                color_temp_kelvin: "{{ (2000 + 1500 * repeat.index / steps) | round(0) | int }}"
+                color_temp_kelvin: "{{ (2000 + 700 * repeat.index / steps) | round(0) | int }}"
                 transition: 55
             - delay: { seconds: 60 }
 

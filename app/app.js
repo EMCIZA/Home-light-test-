@@ -3,7 +3,7 @@
  * is stored only in this browser (localStorage). Includes a demo mode. */
 'use strict';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 // ───────────────────────── Entity IDs (match the HA package) ─────────────────────────
 const DEFAULT_GROUPS = {
@@ -38,30 +38,43 @@ const IDS = {
 
 // Scenes: `demo` describes what the scene does so demo mode can fake it.
 // Keys: L1/L2 = bedside lamps, D1/D2 = downlights. b = brightness %, k = kelvin, rgb = colour.
+// Warm and colourful only – no cool/blue-white light (matches the HA package).
+const c = (b, rgb) => ({ b, rgb });
+const w = (b, k) => ({ b, k });
 const SCENES = [
-  { key: 'energise', name: 'Energise', emoji: '⚡', bg: 'linear-gradient(135deg,#7fd3ff,#3b82f6)',
-    demo: { L1: { b: 100, k: 6000 }, L2: { b: 100, k: 6000 }, D1: { b: 100, k: 6000 }, D2: { b: 100, k: 6000 } } },
-  { key: 'bright', name: 'Bright', emoji: '💡', bg: 'linear-gradient(135deg,#fff3c4,#f6b73c)',
-    demo: { L1: { b: 100, k: 4000 }, L2: { b: 100, k: 4000 }, D1: { b: 100, k: 4000 }, D2: { b: 100, k: 4000 } } },
-  { key: 'read', name: 'Read', emoji: '📖', bg: 'linear-gradient(135deg,#ffe8b8,#d9a25f)',
-    demo: { L1: { b: 85, k: 4000 }, L2: { b: 85, k: 4000 }, D1: { b: 35, k: 3000 }, D2: { b: 35, k: 3000 } } },
-  { key: 'relax', name: 'Relax', emoji: '🛋️', bg: 'linear-gradient(135deg,#ffb36b,#e0603a)',
-    demo: { L1: { b: 55, k: 2400 }, L2: { b: 55, k: 2400 }, D1: { b: 55, k: 2400 }, D2: { b: 55, k: 2400 } } },
+  { key: 'golden', name: 'Golden', emoji: '🌟', bg: 'linear-gradient(135deg,#ffd36b,#ff9f1c)',
+    demo: { L1: c(100, [255, 170, 60]), L2: c(100, [255, 170, 60]), D1: w(100, 2400), D2: w(100, 2400) } },
+  { key: 'citrus', name: 'Citrus', emoji: '🍊', bg: 'linear-gradient(135deg,#ffc93c,#ff6a00)',
+    demo: { L1: c(100, [255, 120, 0]), L2: c(100, [255, 150, 20]), D1: w(90, 2400), D2: w(90, 2400) } },
+  { key: 'read', name: 'Read', emoji: '📖', bg: 'linear-gradient(135deg,#ffe0a8,#d9944f)',
+    demo: { L1: w(85, 2700), L2: w(85, 2700), D1: w(30, 2400), D2: w(30, 2400) } },
+  { key: 'relax', name: 'Relax', emoji: '🛋️', bg: 'linear-gradient(135deg,#ffb38a,#e0603a)',
+    demo: { L1: w(55, 2200), L2: w(55, 2200), D1: w(45, 2200), D2: w(45, 2200) } },
   { key: 'movie', name: 'Movie', emoji: '🎬', bg: 'linear-gradient(135deg,#5a3d2b,#1e1424)',
-    demo: { L1: { b: 20, k: 2200 }, L2: { b: 20, k: 2200 }, D1: null, D2: null } },
-  { key: 'sunset', name: 'Sunset', emoji: '🌅', tag: 'colour', bg: 'linear-gradient(135deg,#ff8a3d,#ff4f8b)',
-    demo: { L1: { b: 70, rgb: [255, 120, 40] }, L2: { b: 60, rgb: [255, 70, 110] }, D1: { b: 25, k: 2200 }, D2: { b: 25, k: 2200 } } },
-  { key: 'galaxy', name: 'Galaxy', emoji: '🌌', tag: 'colour', bg: 'linear-gradient(135deg,#8c3cff,#2864ff)',
-    demo: { L1: { b: 55, rgb: [140, 60, 255] }, L2: { b: 55, rgb: [40, 110, 255] }, D1: null, D2: null } },
+    demo: { L1: w(20, 2200), L2: w(20, 2200), D1: null, D2: null } },
+  { key: 'sunset', name: 'Sunset', emoji: '🌅', bg: 'linear-gradient(135deg,#ff8a3d,#ff4f8b)',
+    demo: { L1: c(70, [255, 120, 40]), L2: c(70, [255, 70, 110]), D1: w(30, 2200), D2: w(30, 2200) } },
+  { key: 'rose', name: 'Rose', emoji: '🌸', bg: 'linear-gradient(135deg,#ff9ac8,#e8418b)',
+    demo: { L1: c(60, [255, 90, 150]), L2: c(60, [255, 120, 170]), D1: w(35, 2200), D2: w(35, 2200) } },
+  { key: 'ocean', name: 'Ocean', emoji: '🌊', bg: 'linear-gradient(135deg,#2ee6d6,#1f6fff)',
+    demo: { L1: c(50, [0, 180, 255]), L2: c(50, [0, 220, 200]), D1: w(30, 2200), D2: w(30, 2200) } },
+  { key: 'aurora', name: 'Aurora', emoji: '💚', bg: 'linear-gradient(135deg,#3cffa0,#8c50ff)',
+    demo: { L1: c(55, [60, 255, 140]), L2: c(55, [140, 80, 255]), D1: w(30, 2200), D2: w(30, 2200) } },
+  { key: 'galaxy', name: 'Galaxy', emoji: '🌌', bg: 'linear-gradient(135deg,#8c3cff,#2864ff)',
+    demo: { L1: c(55, [140, 60, 255]), L2: c(55, [40, 110, 255]), D1: w(20, 2200), D2: w(20, 2200) } },
+  { key: 'lavender', name: 'Lavender', emoji: '💜', bg: 'linear-gradient(135deg,#d6b8ff,#9a6bff)',
+    demo: { L1: c(55, [190, 140, 255]), L2: c(55, [210, 160, 255]), D1: w(35, 2200), D2: w(35, 2200) } },
   { key: 'nightlight', name: 'Nightlight', emoji: '🕯️', bg: 'linear-gradient(135deg,#3a2414,#120c1c)',
-    demo: { L1: { b: 3, k: 2000 }, L2: { b: 3, k: 2000 }, D1: null, D2: null } },
+    demo: { L1: c(3, [255, 90, 20]), L2: c(3, [255, 90, 20]), D1: null, D2: null } },
 ];
 const sceneEntity = (key) => `script.bedroom_scene_${key}`;
 
 const COLOUR_SWATCHES = [
-  [255, 80, 60], [255, 140, 40], [255, 210, 80], [120, 230, 120],
-  [60, 200, 255], [60, 100, 255], [150, 70, 255], [255, 80, 180],
+  [255, 70, 50], [255, 120, 0], [255, 170, 60], [255, 140, 90], [255, 90, 150], [255, 60, 120],
+  [210, 160, 255], [150, 70, 255], [60, 100, 255], [0, 200, 220], [60, 255, 140], [255, 210, 80],
 ];
+// No cool/blue-white: the warmth slider stops at warm white.
+const MAX_KELVIN = 3000;
 
 // ───────────────────────── Storage helpers ─────────────────────────
 const store = {
@@ -309,7 +322,7 @@ class DemoBackend {
     } else if (id === IDS.allOff) {
       for (const m of Object.values(this.members)) this.setLight(m, false);
     } else if (id === IDS.wakeUp) {
-      this.setLight(this.members.L1, true, 60, 3200); this.setLight(this.members.L2, true, 60, 3200);
+      this.setLight(this.members.L1, true, 60, 2700); this.setLight(this.members.L2, true, 60, 2700);
       this.states[IDS.sleep].state = 'off'; this.emit(IDS.sleep);
     } else if (id === IDS.unlock) {
       this.callService('timer', 'start', {}, IDS.override);
@@ -644,7 +657,7 @@ function openSheet(id) {
   }
   const ct = $('#sheet-ct');
   ct.min = s?.attributes?.min_color_temp_kelvin || 2000;
-  ct.max = s?.attributes?.max_color_temp_kelvin || 6500;
+  ct.max = Math.min(s?.attributes?.max_color_temp_kelvin || 6500, MAX_KELVIN);
   renderSheet();
 }
 function closeSheet() {

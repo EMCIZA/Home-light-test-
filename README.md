@@ -11,8 +11,10 @@ free on GitHub Pages. You add it to your home screen, so no App Store and no sub
 
 ## What it does
 
-- **8 scenes**: Energise ⚡, Bright 💡, Read 📖, Relax 🛋️, Movie 🎬, Sunset 🌅, Galaxy 🌌, Nightlight 🕯️.
-  Sunset and Galaxy use colour if your bulbs support it. Otherwise they fall back to warm white automatically.
+- **12 warm & colourful scenes, no cool white light**: Golden 🌟, Citrus 🍊, Read 📖, Relax 🛋️, Movie 🎬, Sunset 🌅,
+  Rose 🌸, Ocean 🌊, Aurora 💚, Galaxy 🌌, Lavender 💜, Nightlight 🕯️.
+  On white-only bulbs, colours fall back to warm white automatically. The app's warmth slider stops at warm white (3000K),
+  and the wake-up sunrise ends on warm gold.
 - **🔌 Phone on charge = bedtime**: after your bedtime, plugging your phone in fades the lights out and turns on *sleep mode*.
   Unplugging it in the morning (from 90 min before wake time) turns sleep mode off.
 - **🕯️ Gentle lights at night**: after bedtime (or in sleep mode), a wall switch, Hue dimmer or the Hue app turns lights on as a soft 5% glow instead of full blast.
