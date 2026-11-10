@@ -543,8 +543,14 @@ script:
       - variables:
           me_home: "{{ states('device_tracker.my_phone') in ['home', 'unknown', 'unavailable'] }}"
           partner_home: "{{ states('device_tracker.partner_phone') in ['home', 'unknown', 'unavailable'] }}"
-          me_ready: "{{ is_state('input_boolean.bedroom_me_in_bed', 'on') }}"
-          partner_ready: "{{ is_state('input_boolean.bedroom_partner_in_bed', 'on') }}"
+          # In bed = said Goodnight / plugged in after bedtime, OR phone on charge right now
+          # (so a phone plugged in before bedtime still counts).
+          me_ready: >
+            {{ is_state('input_boolean.bedroom_me_in_bed', 'on')
+               or is_state('binary_sensor.bedroom_phone_charging', 'on') }}
+          partner_ready: >
+            {{ is_state('input_boolean.bedroom_partner_in_bed', 'on')
+               or is_state('binary_sensor.bedroom_partner_phone_charging', 'on') }}
           someone_ready: "{{ (me_home and me_ready) or (partner_home and partner_ready) }}"
           waiting: "{{ (me_home and not me_ready) or (partner_home and not partner_ready) }}"
       - choose:
