@@ -3,7 +3,7 @@
  * is stored only in this browser (localStorage). Includes a demo mode. */
 'use strict';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 // ───────────────────────── Entity IDs (match the HA package) ─────────────────────────
 const DEFAULT_GROUPS = {
@@ -846,6 +846,31 @@ function wireEvents() {
     if (has(IDS.inBedScript)) call('script', 'turn_on', { variables: { who: store.get('who', 'me') } }, IDS.inBedScript);
     else call('script', 'turn_on', {}, IDS.goodnight);
   });
+  $('#btn-nightlight').addEventListener('click', () => {
+    haptic(20); app.lastScene = 'nightlight'; toast('🕯️ Nightlight');
+    call('script', 'turn_on', {}, sceneEntity('nightlight'));
+  });
+
+  // Bright is small, and at night it needs a press-and-hold so it can't be hit by accident.
+  const bright = $('#btn-bright');
+  const isNight = () => ['night', 'sleep'].includes(document.body.dataset.period);
+  const goBright = () => { haptic(30); app.lastScene = 'golden'; toast('☀️ Bright'); call('script', 'turn_on', {}, sceneEntity('golden')); };
+  let holdTimer, held = false;
+  const endHold = () => { clearTimeout(holdTimer); bright.classList.remove('holding'); };
+  bright.addEventListener('pointerdown', () => {
+    held = false;
+    if (!isNight()) return;
+    bright.classList.add('holding');
+    holdTimer = setTimeout(() => { held = true; endHold(); goBright(); }, 600);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) bright.addEventListener(ev, endHold);
+  bright.addEventListener('contextmenu', (e) => e.preventDefault());
+  bright.addEventListener('click', () => {
+    if (held) { held = false; return; }
+    if (isNight()) { toast('Hold to turn on Bright'); return; }
+    goBright();
+  });
+
   $('#btn-alloff').addEventListener('click', () => { haptic(15); optimisticLight(app.groups.all, false); call('script', 'turn_on', {}, IDS.allOff); });
 
   // Banner actions

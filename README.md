@@ -25,6 +25,7 @@ free on GitHub Pages. You add it to your home screen, so no App Store and no sub
 - **😴 Sleep timer**: 15 min, 30 min or 1 hour, then the lights fade out over a minute. It cancels itself if you switch the lights off first.
 - **🌙 Wind-down** (off by default): from 30 minutes before bedtime, lights that are on dim a little every 5 minutes and keep their colours.
 - **🌇 Sunset & welcome home** (off by default): when it gets dark, or someone gets home after dark, the lights come on to Relax. Never after bedtime.
+- **Bottom buttons**: big 🌙 Goodnight and 🕯️ Nightlight, with a small ☀️ Bright that needs a press-and-hold at night.
 - **Shared active scene**: the scene someone picks is highlighted on every phone running Glow.
 - **Hey Siri**: in Shortcuts, make a shortcut with Home Assistant → *Perform Action* → `script.turn_on` → `script.bedroom_scene_rose` (or any scene), name it "Rose lights", and say *"Hey Siri, Rose lights"*.
 - Every time, toggle and slider can be changed from the app's **Routines** tab.
@@ -88,6 +89,8 @@ Two one-tap scripts do exactly what Glow's Goodnight button does, two-step bedti
 - **iPhone (iOS 18+):** make a Shortcut *Goodnight*: Home Assistant → **Perform action** → `script.bedroom_goodnight_me`.
   Then long-press the lock screen → **Customize** → **Lock Screen** → tap the torch/camera button → **−** → **+** →
   **Shortcut** → *Goodnight*. You can add the same Shortcut to Control Center, or use Siri: "Hey Siri, Goodnight".
+  The lock screen has two button slots: a good pair is **Goodnight** + **Nightlight** (`script.bedroom_scene_nightlight`).
+  Put **Bright** (`script.bedroom_scene_golden`) in Control Center instead, so it's never pressed by accident in the dark.
 - **Android:** Home Assistant app → **Settings → Companion app → Manage tiles** → pick a tile → entity
   `script.bedroom_goodnight_partner`, label *Goodnight*. Then pull down quick settings → ✏️ edit → drag the
   *Goodnight* tile in. It works from the lock screen.
