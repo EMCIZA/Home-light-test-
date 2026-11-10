@@ -60,15 +60,24 @@ Two Shortcuts automations fix that. They run the moment the charger connects or 
 Home Assistant uses whichever reported most recently, the Shortcut or the app, and the bedtime check still applies.
 
 **Partner's phone:** do the same on their iPhone (they need the Home Assistant app installed and logged in),
-but use `input_boolean.bedroom_partner_phone_on_charger`. Then choose in Glow → Routines:
-- **Wait for both phones = off:** whichever phone goes on charge first after bedtime starts Goodnight.
-- **Wait for both phones = on:** Goodnight waits until both phones are charging.
+but use `input_boolean.bedroom_partner_phone_on_charger`. On Android the Home Assistant app reports charging by itself.
 
+**Two-step bedtime** (Glow → Routines → *Two-step bedtime*). Set **Settings → Whose phone is this?** on each phone first:
+
+| Situation | What happens |
+|---|---|
+| Both home, first person charges or taps Goodnight | 🕯️ Nightlight (lamps 3%, downlights off) |
+| Second person charges or taps Goodnight | Lights fade off, sleep mode on |
+| The other person isn't home | Lights off straight away, no waiting |
+| Lights are off and the away person comes home | 🕯️ Nightlight until they charge or tap Goodnight |
+| The person being waited for leaves | Stop waiting, lights off |
+
+The nightlight banner in Glow has a **Lights off now** button. With two-step bedtime off, the first charge or Goodnight turns everything off.
 Unplugging either phone in the morning ends sleep mode.
 
 **Who's home:** set `device_tracker.my_phone` and `device_tracker.partner_phone` in the package to your phones'
 location trackers (from the Companion app). Then:
-- *Wait for both phones* only waits for phones that are **at home**, so if one of you is away, the other's phone alone starts Goodnight.
+- *Two-step bedtime* only waits for people who are **at home**.
 - *Everyone left* only switches the lights off when **neither** phone is home.
 
 ## 2 · Put the app online with GitHub Pages

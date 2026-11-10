@@ -204,6 +204,17 @@ body[data-period="sleep"] .sky::before {
 }
 .bulb.big { width: 56px; height: 56px; flex: 0 0 auto; }
 
+/* ── Whose phone ── */
+.who-pick { display: flex; gap: 10px; margin-top: 12px; }
+.pill-radio { flex: 1; }
+.pill-radio input { position: absolute; opacity: 0; }
+.pill-radio span {
+  display: block; text-align: center; padding: 12px; border-radius: 14px; font-weight: 700;
+  border: 1px solid var(--line); background: rgba(255,255,255,.06); cursor: pointer;
+}
+.pill-radio input:checked + span { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #2a1200; border-color: transparent; }
+.pill-radio input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+
 /* ── Sleep timer ── */
 .sleep-timer {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;

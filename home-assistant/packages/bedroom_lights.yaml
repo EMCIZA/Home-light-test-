@@ -79,17 +79,6 @@ template:
           {{ states('zone.home') | int(0) > 0
              or is_state('device_tracker.my_phone', 'home')
              or is_state('device_tracker.partner_phone', 'home') }}
-      # Whose phone should Goodnight wait for? Only people who are home.
-      # A phone without location set up always counts as home.
-      - name: Bedroom Phones Ready For Bed
-        unique_id: bedroom_phones_ready_for_bed
-        icon: mdi:bed
-        state: >
-          {% set me_away = states('device_tracker.my_phone') not in ['home', 'unknown', 'unavailable'] %}
-          {% set partner_away = states('device_tracker.partner_phone') not in ['home', 'unknown', 'unavailable'] %}
-          {% set me_ok = me_away or is_state('binary_sensor.bedroom_phone_charging', 'on') %}
-          {% set partner_ok = partner_away or is_state('binary_sensor.bedroom_partner_phone_charging', 'on') %}
-          {{ me_ok and partner_ok and not (me_away and partner_away) }}
 
 # ──────────────────────── nothing to edit below here ─────────────────────────
 
@@ -154,6 +143,15 @@ input_boolean:
   bedroom_sunset_welcome:
     name: Lights on at sunset / when you get home
     icon: mdi:home-lightbulb-outline
+  bedroom_me_in_bed:
+    name: In bed (me)
+    icon: mdi:bed
+  bedroom_partner_in_bed:
+    name: In bed (partner)
+    icon: mdi:bed-outline
+  bedroom_waiting_for_partner:
+    name: Nightlight on, waiting for the other person
+    icon: mdi:bed-clock
   bedroom_defaults_applied:
     name: Bedroom defaults applied (internal)
     icon: mdi:cog
@@ -467,6 +465,8 @@ script:
     sequence:
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.bedroom_sleep_mode }
+      - action: input_boolean.turn_off
+        target: { entity_id: input_boolean.bedroom_waiting_for_partner }
       - action: script.turn_off
         target: { entity_id: script.bedroom_wake_up }
       - action: light.turn_off
@@ -489,6 +489,65 @@ script:
         target: { entity_id: light.bedside_lamps }
         data:
           transition: "{{ (states('input_number.bedroom_goodnight_fade_min') | float(1) * 60) | int + 1 }}"
+
+  # "I'm going to bed" – from a phone going on charge at night, or the
+  # Goodnight button in Glow (which knows whose phone it is).
+  bedroom_in_bed:
+    alias: "Bedroom · Someone is going to bed"
+    icon: mdi:bed
+    mode: queued
+    fields:
+      who:
+        description: "me or partner"
+        example: me
+    sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: >
+            {{ 'input_boolean.bedroom_partner_in_bed' if who == 'partner' else 'input_boolean.bedroom_me_in_bed' }}
+      - if:
+          - condition: state
+            entity_id: input_boolean.bedroom_wait_for_both_phones
+            state: "off"
+        then:
+          - action: script.bedroom_goodnight
+        else:
+          - action: script.bedroom_bedtime_check
+
+  # Two-step bedtime (when "Wait for both phones" is on):
+  #  • everyone at home is in bed  → Goodnight (lights fade off)
+  #  • only some of them           → Nightlight, so the other can see their way in
+  # Someone who isn't home is never waited for.
+  bedroom_bedtime_check:
+    alias: "Bedroom · Bedtime check"
+    icon: mdi:bed-clock
+    mode: queued
+    sequence:
+      - variables:
+          me_home: "{{ states('device_tracker.my_phone') in ['home', 'unknown', 'unavailable'] }}"
+          partner_home: "{{ states('device_tracker.partner_phone') in ['home', 'unknown', 'unavailable'] }}"
+          me_ready: "{{ is_state('input_boolean.bedroom_me_in_bed', 'on') }}"
+          partner_ready: "{{ is_state('input_boolean.bedroom_partner_in_bed', 'on') }}"
+          someone_ready: "{{ (me_home and me_ready) or (partner_home and partner_ready) }}"
+          waiting: "{{ (me_home and not me_ready) or (partner_home and not partner_ready) }}"
+      - choose:
+          - conditions: "{{ someone_ready and not waiting }}"
+            sequence:
+              - if: >
+                  {{ is_state('input_boolean.bedroom_sleep_mode', 'off')
+                     or is_state('input_boolean.bedroom_waiting_for_partner', 'on')
+                     or is_state('light.bedroom_all_lights', 'on') }}
+                then:
+                  - action: script.bedroom_goodnight
+          - conditions: "{{ someone_ready and waiting }}"
+            sequence:
+              - if: >
+                  {{ is_state('input_boolean.bedroom_waiting_for_partner', 'off')
+                     or is_state('light.bedroom_all_lights', 'off') }}
+                then:
+                  - action: input_boolean.turn_on
+                    target: { entity_id: input_boolean.bedroom_waiting_for_partner }
+                  - action: script.bedroom_scene_nightlight
 
   bedroom_wake_up:
     alias: "Bedroom · Wake-up light"
@@ -616,34 +675,79 @@ automation:
       # Daylight lock and wake-up light start OFF – switch them on in the app.
 
   - id: bedroom_goodnight_on_charge
-    alias: "Bedroom · Phone on charge at bedtime → Goodnight"
-    mode: single
+    alias: "Bedroom · Phone on charge at bedtime → in bed"
+    mode: queued
     triggers:
       - trigger: state
-        entity_id:
-          - binary_sensor.bedroom_phone_charging
-          - binary_sensor.bedroom_partner_phone_charging
-          - binary_sensor.bedroom_phones_ready_for_bed
+        entity_id: binary_sensor.bedroom_phone_charging
         from: "off"
         to: "on"
+        id: me
+      - trigger: state
+        entity_id: binary_sensor.bedroom_partner_phone_charging
+        from: "off"
+        to: "on"
+        id: partner
     conditions:
       - condition: state
         entity_id: input_boolean.bedroom_auto_goodnight
         state: "on"
-      # "Wait for both phones" on → every phone that's at home must be charging.
-      - condition: template
-        value_template: >
-          {{ is_state('input_boolean.bedroom_wait_for_both_phones', 'off')
-             or is_state('binary_sensor.bedroom_phones_ready_for_bed', 'on') }}
       - condition: state
         entity_id: sensor.bedroom_light_period
         state: night
-      - condition: state
-        entity_id: input_boolean.bedroom_sleep_mode
-        state: "off"
     actions:
-      - action: script.turn_on
-        target: { entity_id: script.bedroom_goodnight }
+      - action: script.bedroom_in_bed
+        data: { who: "{{ trigger.id }}" }
+
+  - id: bedroom_bedtime_presence
+    alias: "Bedroom · Someone comes home or leaves at bedtime"
+    description: >
+      Coming home while the other is in bed → Nightlight until you go to bed too.
+      Leaving while they wait for you → they stop waiting and the lights go off.
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: device_tracker.my_phone
+        to: ~
+        id: me
+      - trigger: state
+        entity_id: device_tracker.partner_phone
+        to: ~
+        id: partner
+    conditions:
+      - condition: state
+        entity_id: input_boolean.bedroom_wait_for_both_phones
+        state: "on"
+      - condition: template
+        value_template: >
+          {{ is_state('input_boolean.bedroom_sleep_mode', 'on')
+             or is_state('input_boolean.bedroom_me_in_bed', 'on')
+             or is_state('input_boolean.bedroom_partner_in_bed', 'on') }}
+    actions:
+      - if: "{{ trigger.to_state.state == 'home' }}"
+        then:   # just got home, so not in bed yet
+          - action: input_boolean.turn_off
+            target:
+              entity_id: >
+                {{ 'input_boolean.bedroom_partner_in_bed' if trigger.id == 'partner' else 'input_boolean.bedroom_me_in_bed' }}
+      - action: script.bedroom_bedtime_check
+
+  - id: bedroom_bedtime_reset
+    alias: "Bedroom · New day → clear who's in bed"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.bedroom_sleep_mode
+        from: "on"
+        to: "off"
+      - trigger: time
+        at: "12:00:00"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.bedroom_me_in_bed
+            - input_boolean.bedroom_partner_in_bed
+            - input_boolean.bedroom_waiting_for_partner
 
   - id: bedroom_morning_unplug
     alias: "Bedroom · Phone unplugged in the morning → end sleep mode"

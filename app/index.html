@@ -122,7 +122,7 @@
         <div class="row"><span>Fade out over</span><span class="num"><input type="range" min="0" max="10" step="1" data-number="goodnightFade" class="slider small"><b data-number-label="goodnightFade" data-unit=" min"></b></span></div>
         <div class="row"><span>Your phone</span><b id="phone-status">—</b></div>
         <div class="row"><span>Partner's phone</span><b id="partner-status">—</b></div>
-        <div class="row"><span>Wait for both phones</span><label class="switch"><input type="checkbox" data-bool="bothPhones"><span></span></label></div>
+        <div class="row"><span>Two-step bedtime<br><small class="muted">First to bed gets a nightlight; lights go off when you are both in bed</small></span><label class="switch"><input type="checkbox" data-bool="bothPhones"><span></span></label></div>
       </div>
 
       <div class="card routine">
@@ -219,6 +219,14 @@
           <label class="field"><span>Access token</span><input id="set-token" type="password" placeholder="(unchanged)"></label>
           <button class="btn primary" type="submit">Save &amp; reconnect</button>
         </form>
+      </div>
+      <div class="card">
+        <h3>Whose phone is this?</h3>
+        <p class="muted">So Goodnight knows who's going to bed. Set this once on each phone.</p>
+        <div class="who-pick">
+          <label class="pill-radio"><input type="radio" name="who" value="me"><span>🙋 Me</span></label>
+          <label class="pill-radio"><input type="radio" name="who" value="partner"><span>💞 Partner</span></label>
+        </div>
       </div>
       <div class="card">
         <h3>Light groups</h3>
