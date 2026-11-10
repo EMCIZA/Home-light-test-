@@ -15,6 +15,7 @@ free on GitHub Pages. You add it to your home screen, so no App Store and no sub
   Rose 🌸, Ocean 🌊, Aurora 💚, Galaxy 🌌, Lavender 💜, Nightlight 🕯️.
   On white-only bulbs, colours fall back to warm white automatically. The app's warmth slider stops at warm white (3000K),
   and the wake-up sunrise ends on warm gold.
+- **🌙 Goodnight fade**: downlights dim off over about 10 s; bright lamps dim to the nightlight glow, then fade off over your *Fade out over* time. Lights only ever get dimmer.
 - **🔌 Phone on charge = bedtime**: after your bedtime, plugging your phone in fades the lights out and turns on *sleep mode*.
   Unplugging it in the morning (from 90 min before wake time) turns sleep mode off.
 - **🕯️ Gentle lights at night**: after bedtime (or in sleep mode), a wall switch, Hue dimmer or the Hue app turns lights on as a soft 5% glow instead of full blast.
