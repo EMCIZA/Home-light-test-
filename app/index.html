@@ -91,6 +91,16 @@
       <h2 class="section-title">Lights</h2>
       <div class="lights" id="lights"></div>
 
+      <div class="sleep-timer" id="sleep-timer" hidden>
+        <span id="sleep-timer-text">😴 Sleep timer</span>
+        <span class="sleep-btns">
+          <button class="pill" data-sleep="15">15m</button>
+          <button class="pill" data-sleep="30">30m</button>
+          <button class="pill" data-sleep="60">1h</button>
+          <button class="pill" id="sleep-cancel" hidden>Cancel</button>
+        </span>
+      </div>
+
       <div class="actions-row">
         <button class="btn night big" id="btn-goodnight">🌙 Goodnight</button>
         <button class="btn ghost big" id="btn-alloff">All off</button>
@@ -173,6 +183,28 @@
             <p class="muted">All lights off 10 minutes after the last person leaves home.</p>
           </div>
           <label class="switch"><input type="checkbox" data-bool="awayOff"><span></span></label>
+        </div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🌙</span>
+          <div>
+            <h3>Wind-down</h3>
+            <p class="muted">From 30 min before bedtime, lights that are on slowly dim. Colours stay the same.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="windDown"><span></span></label>
+        </div>
+      </div>
+
+      <div class="card routine">
+        <div class="routine-head">
+          <span class="r-emoji">🌇</span>
+          <div>
+            <h3>Sunset &amp; welcome home</h3>
+            <p class="muted">When it gets dark, or you get home after dark, the lights come on to Relax. Not after bedtime.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-bool="sunsetWelcome"><span></span></label>
         </div>
       </div>
     </section>

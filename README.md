@@ -22,6 +22,11 @@ free on GitHub Pages. You add it to your home screen, so no App Store and no sub
   and lights left on get switched off once it's properly light. The Glow app still works, and *Pause 1h* lets switches work for an hour.
 - **🌅 Wake-up light** (off by default): the bedside lamps brighten slowly like a sunrise, weekdays only if you want.
 - **🏃 Everyone left**: all lights off 10 minutes after the last person leaves home.
+- **😴 Sleep timer**: 15 min, 30 min or 1 hour, then the lights fade out over a minute. It cancels itself if you switch the lights off first.
+- **🌙 Wind-down** (off by default): from 30 minutes before bedtime, lights that are on dim a little every 5 minutes and keep their colours.
+- **🌇 Sunset & welcome home** (off by default): when it gets dark, or someone gets home after dark, the lights come on to Relax. Never after bedtime.
+- **Shared active scene**: the scene someone picks is highlighted on every phone running Glow.
+- **Hey Siri**: in Shortcuts, make a shortcut with Home Assistant → *Perform Action* → `script.turn_on` → `script.bedroom_scene_rose` (or any scene), name it "Rose lights", and say *"Hey Siri, Rose lights"*.
 - Every time, toggle and slider can be changed from the app's **Routines** tab.
 
 ## 1 · Home Assistant setup (about 5 minutes)

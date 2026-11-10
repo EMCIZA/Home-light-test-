@@ -204,6 +204,15 @@ body[data-period="sleep"] .sky::before {
 }
 .bulb.big { width: 56px; height: 56px; flex: 0 0 auto; }
 
+/* ── Sleep timer ── */
+.sleep-timer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-top: 20px; padding: 12px 14px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--line); font-weight: 700;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.sleep-btns { display: flex; gap: 6px; }
+
 /* ── Buttons ── */
 .btn {
   border: 1px solid var(--line); background: var(--card-strong); border-radius: 16px;

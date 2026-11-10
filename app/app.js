@@ -3,7 +3,7 @@
  * is stored only in this browser (localStorage). Includes a demo mode. */
 'use strict';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 // ───────────────────────── Entity IDs (match the HA package) ─────────────────────────
 const DEFAULT_GROUPS = {
@@ -34,6 +34,11 @@ const IDS = {
   allOff: 'script.bedroom_all_off',
   wakeUp: 'script.bedroom_wake_up',
   unlock: 'script.bedroom_daylight_unlock',
+  sleepTimer: 'timer.bedroom_sleep_timer',
+  sleepTimerScript: 'script.bedroom_sleep_timer',
+  windDown: 'input_boolean.bedroom_wind_down',
+  sunsetWelcome: 'input_boolean.bedroom_sunset_welcome',
+  lastScene: 'input_text.bedroom_last_scene',
 };
 
 // Scenes: `demo` describes what the scene does so demo mode can fake it.
@@ -234,8 +239,12 @@ class DemoBackend {
     ent(IDS.nightBrightness, '5.0', { min: 1, max: 30, step: 1 });
     ent(IDS.wakeFade, '15.0', { min: 5, max: 45, step: 5 });
     ent(IDS.override, 'idle', { duration: '1:00:00' });
+    ent(IDS.sleepTimer, 'idle', { duration: '0:30:00' });
+    ent(IDS.windDown, 'off');
+    ent(IDS.sunsetWelcome, 'off');
+    ent(IDS.lastScene, '');
     for (const sc of SCENES) ent(sceneEntity(sc.key), 'off', { friendly_name: `Scene · ${sc.name}` });
-    for (const k of ['goodnight', 'allOff', 'wakeUp', 'unlock']) ent(IDS[k], 'off');
+    for (const k of ['goodnight', 'allOff', 'wakeUp', 'unlock', 'sleepTimerScript']) ent(IDS[k], 'off');
     this.states = s;
     this.recalcGroups(false);
     this.onStatus('demo');
@@ -296,26 +305,31 @@ class DemoBackend {
       }
     } else if (domain === 'input_datetime') {
       for (const id of ids) { this.states[id].state = data.time; this.emit(id); }
-    } else if (domain === 'input_number') {
+    } else if (domain === 'input_number' || domain === 'input_text') {
       for (const id of ids) { this.states[id].state = String(data.value); this.emit(id); }
     } else if (domain === 'timer') {
       for (const id of ids) {
         const st = this.states[id];
-        if (service === 'start') { st.state = 'active'; st.attributes.finishes_at = new Date(Date.now() + 3600e3).toISOString(); }
+        const secs = data.duration ? data.duration.split(':').reduce((t, v) => t * 60 + Number(v), 0) : 3600;
+        if (service === 'start') { st.state = 'active'; st.attributes.finishes_at = new Date(Date.now() + secs * 1000).toISOString(); }
         else { st.state = 'idle'; delete st.attributes.finishes_at; }
         this.emit(id);
       }
     } else if (domain === 'script') {
-      for (const id of ids) this.runScript(id);
+      for (const id of ids) this.runScript(id, data.variables || {});
     }
   }
 
-  runScript(id) {
+  runScript(id, vars = {}) {
     const scene = SCENES.find((s) => sceneEntity(s.key) === id);
     if (scene) {
       for (const [k, spec] of Object.entries(scene.demo)) {
         this.setLight(this.members[k], !!spec, spec?.b, spec?.k, spec?.rgb);
       }
+      this.states[IDS.lastScene].state = scene.key; this.emit(IDS.lastScene);
+    } else if (id === IDS.sleepTimerScript) {
+      const m = Number(vars.minutes || 30);
+      this.callService('timer', 'start', { duration: `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:00` }, IDS.sleepTimer);
     } else if (id === IDS.goodnight) {
       this.states[IDS.sleep].state = 'on'; this.emit(IDS.sleep);
       for (const m of Object.values(this.members)) this.setLight(m, false);
@@ -328,6 +342,10 @@ class DemoBackend {
       this.callService('timer', 'start', {}, IDS.override);
     }
     this.recalcGroups();
+    if (this.states[DEFAULT_GROUPS.all].state === 'off') {
+      this.states[IDS.lastScene].state = ''; this.emit(IDS.lastScene);
+      if (this.states[IDS.sleepTimer].state === 'active') this.callService('timer', 'cancel', {}, IDS.sleepTimer);
+    }
   }
 
   close() {}
@@ -499,6 +517,17 @@ function render() {
   renderLights();
   renderScenesActive();
   renderRoutines();
+  renderSleepTimer();
+}
+
+function renderSleepTimer() {
+  const t = st(IDS.sleepTimer);
+  $('#sleep-timer').hidden = !t;
+  if (!t) return;
+  const active = t.state === 'active';
+  $('#sleep-timer-text').textContent = active ? `😴 Lights off in ${minutesLeft(t)} min` : '😴 Sleep timer';
+  for (const b of $$('[data-sleep]')) b.hidden = active;
+  $('#sleep-cancel').hidden = !active;
 }
 
 function renderHeader() {
@@ -608,7 +637,9 @@ function buildScenes() {
 }
 function renderScenesActive() {
   const anyOn = groupMembers().some((id) => st(id)?.state === 'on');
-  for (const b of $$('.scene')) b.classList.toggle('active', anyOn && b.dataset.scene === app.lastScene);
+  const shared = st(IDS.lastScene)?.state;
+  const active = shared !== undefined ? shared : app.lastScene;
+  for (const b of $$('.scene')) b.classList.toggle('active', anyOn && b.dataset.scene === active);
 }
 
 function renderRoutines() {
@@ -829,6 +860,14 @@ function wireEvents() {
     const active = st(IDS.override)?.state === 'active';
     if (active) call('timer', 'cancel', {}, IDS.override);
     else { toast('🔓 Switches work for 1 hour'); call('script', 'turn_on', {}, IDS.unlock); }
+  });
+  $('#sleep-timer').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    haptic();
+    if (b.id === 'sleep-cancel') { call('timer', 'cancel', {}, IDS.sleepTimer); toast('Sleep timer off'); return; }
+    const m = Number(b.dataset.sleep);
+    call('script', 'turn_on', { variables: { minutes: m } }, IDS.sleepTimerScript);
+    toast(`😴 Lights fade out in ${m} min`);
   });
   $('#btn-wake-test').addEventListener('click', () => { toast('🌅 Here comes the sun'); call('script', 'turn_on', {}, IDS.wakeUp); });
 

@@ -148,9 +148,21 @@ input_boolean:
   bedroom_wait_for_both_phones:
     name: Goodnight waits for both phones
     icon: mdi:account-multiple-check
+  bedroom_wind_down:
+    name: Wind-down before bedtime
+    icon: mdi:weather-night-partly-cloudy
+  bedroom_sunset_welcome:
+    name: Lights on at sunset / when you get home
+    icon: mdi:home-lightbulb-outline
   bedroom_defaults_applied:
     name: Bedroom defaults applied (internal)
     icon: mdi:cog
+
+input_text:
+  bedroom_last_scene:
+    name: Bedroom last scene
+    max: 32
+    icon: mdi:palette
 
 input_datetime:
   bedroom_bedtime:
@@ -191,6 +203,11 @@ timer:
     duration: "01:00:00"
     restore: true
     icon: mdi:lock-open-variant
+  bedroom_sleep_timer:
+    name: Sleep timer
+    duration: "00:30:00"
+    restore: true
+    icon: mdi:timer-outline
 
 ###############################################################################
 #  SCENES – warm and colourful only, no cool/blue-white light.
@@ -210,6 +227,11 @@ script:
           lamps_colour: "{{ state_attr('light.bedside_lamps', 'supported_color_modes') | default([], true) | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}"
           downs_colour: "{{ state_attr('light.downlights', 'supported_color_modes') | default([], true) | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | count > 0 }}"
           t: "{{ transition | default(2) }}"
+      - if: "{{ scene is defined }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.bedroom_last_scene }
+            data: { value: "{{ scene }}" }
       - if: "{{ lamp_bri | default(0) | int == 0 }}"
         then:
           - action: light.turn_off
@@ -254,6 +276,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: golden
           lamp_bri: 100
           l1: [255, 170, 60]
           down_bri: 100
@@ -269,6 +292,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: citrus
           lamp_bri: 100
           l1: [255, 120, 0]
           l2: [255, 150, 20]
@@ -285,6 +309,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: read
           lamp_bri: 85
           lamp_k: 2700
           down_bri: 30
@@ -299,6 +324,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: relax
           lamp_bri: 55
           lamp_k: 2200
           down_bri: 45
@@ -312,6 +338,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: movie
           lamp_bri: 20
           lamp_k: 2200
           down_bri: 0
@@ -323,6 +350,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: sunset
           lamp_bri: 70
           l1: [255, 120, 40]
           l2: [255, 70, 110]
@@ -339,6 +367,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: rose
           lamp_bri: 60
           l1: [255, 90, 150]
           l2: [255, 120, 170]
@@ -353,6 +382,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: ocean
           lamp_bri: 50
           l1: [0, 180, 255]
           l2: [0, 220, 200]
@@ -367,6 +397,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: aurora
           lamp_bri: 55
           l1: [60, 255, 140]
           l2: [140, 80, 255]
@@ -381,6 +412,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: galaxy
           lamp_bri: 55
           l1: [140, 60, 255]
           l2: [40, 110, 255]
@@ -395,6 +427,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: lavender
           lamp_bri: 55
           l1: [190, 140, 255]
           l2: [210, 160, 255]
@@ -408,6 +441,7 @@ script:
     sequence:
       - action: script.bedroom_paint
         data:
+          scene: nightlight
           lamp_bri: 3
           l1: [255, 90, 20]
           lamp_k: 2000
@@ -490,6 +524,54 @@ script:
     sequence:
       - action: timer.start
         target: { entity_id: timer.bedroom_daylight_override }
+
+  bedroom_sleep_timer:
+    alias: "Bedroom · Sleep timer"
+    icon: mdi:timer-outline
+    mode: restart
+    fields:
+      minutes:
+        description: Minutes until the lights fade out
+        example: 30
+    sequence:
+      - action: timer.start
+        target: { entity_id: timer.bedroom_sleep_timer }
+        data:
+          duration: "{{ '%02d:%02d:00' % ((minutes | int(30)) // 60, (minutes | int(30)) % 60) }}"
+
+  bedroom_wind_down:
+    alias: "Bedroom · Wind-down"
+    icon: mdi:weather-night-partly-cloudy
+    mode: single
+    variables:
+      start_scene: "{{ states('input_text.bedroom_last_scene') }}"
+    sequence:
+      # Six gentle steps, five minutes apart. Colours stay; only brightness drops.
+      # Stops if the lights go off, sleep mode starts, or someone picks a scene.
+      - repeat:
+          while:
+            - condition: state
+              entity_id: light.bedroom_all_lights
+              state: "on"
+            - condition: state
+              entity_id: input_boolean.bedroom_sleep_mode
+              state: "off"
+            - condition: template
+              value_template: >
+                {{ repeat.index <= 6 and states('input_text.bedroom_last_scene') == start_scene }}
+          sequence:
+            - variables:
+                targets: >
+                  {{ expand('light.bedroom_all_lights') | selectattr('state', 'eq', 'on')
+                     | selectattr('attributes.brightness', 'defined')
+                     | selectattr('attributes.brightness', 'gt', 64)
+                     | map(attribute='entity_id') | list }}
+            - if: "{{ targets | count > 0 }}"
+              then:
+                - action: light.turn_on
+                  target: { entity_id: "{{ targets }}" }
+                  data: { brightness_step_pct: -8, transition: 120 }
+            - delay: { minutes: 5 }
 
 ###############################################################################
 #  AUTOMATIONS
@@ -725,3 +807,84 @@ automation:
         data: { transition: 2 }
       - action: input_boolean.turn_off
         target: { entity_id: input_boolean.bedroom_sleep_mode }
+
+  - id: bedroom_sleep_timer_done
+    alias: "Bedroom · Sleep timer finished → fade out"
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data: { entity_id: timer.bedroom_sleep_timer }
+    actions:
+      - action: light.turn_off
+        target: { entity_id: light.bedroom_all_lights }
+        data: { transition: 60 }
+
+  - id: bedroom_all_lights_off_housekeeping
+    alias: "Bedroom · All lights off → cancel sleep timer, clear active scene"
+    triggers:
+      - trigger: state
+        entity_id: light.bedroom_all_lights
+        to: "off"
+    actions:
+      - action: timer.cancel
+        target: { entity_id: timer.bedroom_sleep_timer }
+      - action: input_text.set_value
+        target: { entity_id: input_text.bedroom_last_scene }
+        data: { value: "" }
+
+  - id: bedroom_wind_down
+    alias: "Bedroom · Wind-down 30 min before bedtime"
+    triggers:
+      - trigger: template
+        value_template: >
+          {{ now().strftime('%H:%M')
+             == (today_at(states('input_datetime.bedroom_bedtime')) - timedelta(minutes=30)).strftime('%H:%M') }}
+    conditions:
+      - condition: state
+        entity_id: input_boolean.bedroom_wind_down
+        state: "on"
+      - condition: state
+        entity_id: light.bedroom_all_lights
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.bedroom_sleep_mode
+        state: "off"
+    actions:
+      - action: script.turn_on
+        target: { entity_id: script.bedroom_wind_down }
+
+  - id: bedroom_sunset_welcome
+    alias: "Bedroom · Lights on at sunset / when you get home after dark"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.bedroom_is_daytime
+        from: "on"
+        to: "off"
+      - trigger: state
+        entity_id: binary_sensor.bedroom_someone_home
+        from: "off"
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.bedroom_sunset_welcome
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.bedroom_is_daytime
+        state: "off"
+      - condition: state
+        entity_id: binary_sensor.bedroom_someone_home
+        state: "on"
+      - condition: state
+        entity_id: light.bedroom_all_lights
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.bedroom_sleep_mode
+        state: "off"
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: sensor.bedroom_light_period
+            state: night
+    actions:
+      - action: script.turn_on
+        target: { entity_id: script.bedroom_scene_relax }
