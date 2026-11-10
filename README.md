@@ -80,6 +80,18 @@ location trackers (from the Companion app). Then:
 - *Two-step bedtime* only waits for people who are **at home**.
 - *Everyone left* only switches the lights off when **neither** phone is home.
 
+### Goodnight from the lock screen
+
+Two one-tap scripts do exactly what Glow's Goodnight button does, two-step bedtime included:
+`script.bedroom_goodnight_me` and `script.bedroom_goodnight_partner`.
+
+- **iPhone (iOS 18+):** make a Shortcut *Goodnight*: Home Assistant → **Perform action** → `script.bedroom_goodnight_me`.
+  Then long-press the lock screen → **Customize** → **Lock Screen** → tap the torch/camera button → **−** → **+** →
+  **Shortcut** → *Goodnight*. You can add the same Shortcut to Control Center, or use Siri: "Hey Siri, Goodnight".
+- **Android:** Home Assistant app → **Settings → Companion app → Manage tiles** → pick a tile → entity
+  `script.bedroom_goodnight_partner`, label *Goodnight*. Then pull down quick settings → ✏️ edit → drag the
+  *Goodnight* tile in. It works from the lock screen.
+
 ## 2 · Put the app online with GitHub Pages
 
 1. Merge this branch into `main`.

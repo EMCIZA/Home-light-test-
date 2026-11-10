@@ -514,6 +514,23 @@ script:
         else:
           - action: script.bedroom_bedtime_check
 
+  # One-tap versions for lock-screen buttons, widgets and Siri (no data needed).
+  bedroom_goodnight_me:
+    alias: "Goodnight (me)"
+    icon: mdi:sleep
+    mode: queued
+    sequence:
+      - action: script.bedroom_in_bed
+        data: { who: me }
+
+  bedroom_goodnight_partner:
+    alias: "Goodnight (partner)"
+    icon: mdi:sleep
+    mode: queued
+    sequence:
+      - action: script.bedroom_in_bed
+        data: { who: partner }
+
   # Two-step bedtime (when "Wait for both phones" is on):
   #  • everyone at home is in bed  → Goodnight (lights fade off)
   #  • only some of them           → Nightlight, so the other can see their way in
