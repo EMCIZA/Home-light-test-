@@ -84,7 +84,7 @@ location trackers (from the Companion app). Then:
 
 ### Goodnight from the lock screen
 
-Two one-tap scripts do exactly what Glow's Goodnight button does, two-step bedtime included:
+Two one-tap scripts work as a dual button: **lights on → Goodnight** (two-step bedtime included), **lights off → Nightlight**:
 `script.bedroom_goodnight_me` and `script.bedroom_goodnight_partner`.
 
 - **iPhone (iOS 18+):** make a Shortcut *Goodnight*: Home Assistant → **Perform action** → `script.bedroom_goodnight_me`.
