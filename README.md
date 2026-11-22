@@ -61,6 +61,10 @@ Two Shortcuts automations fix that. They run the moment the charger connects or 
 
 Home Assistant uses whichever reported most recently, the Shortcut or the app, and the bedtime check still applies.
 
+**Only at home:** to stop "failed" notifications at work, wrap the action in **Get Network Details** (Wi-Fi → Network Name)
+→ **If** *Network Details* **is** *your home Wi-Fi name* → action → **End If**. Home Assistant clears the "on charger"
+switch whenever a phone leaves home, so a skipped unplug away from home never leaves it stuck.
+
 **Partner's phone:** do the same on their iPhone (they need the Home Assistant app installed and logged in),
 but use `input_boolean.bedroom_partner_phone_on_charger`. On Android the Home Assistant app reports charging by itself.
 
